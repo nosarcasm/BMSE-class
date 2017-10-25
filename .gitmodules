@@ -1,0 +1,3 @@
+[submodule "avggin"]
+	path = avggin
+	url = git@github.com:nosarcasm/avggin.git
