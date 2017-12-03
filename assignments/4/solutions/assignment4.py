@@ -6,8 +6,8 @@
 :License: MIT
 """
 
-import pandas as pd
-import networkx as nx
+import pandas as pd #for importing tsv files
+import networkx as nx #for checking the graph
 
 class Pedigree(object):
 	''' Pedigree() Creates class that loads person and variant data from files
@@ -33,7 +33,9 @@ class Pedigree(object):
 
 	def __init__(self,people=None,variants=None,graph=None):
 		"""A blank Pedigree object for loading people and variants"""
-		self.people=people if people != None else dict()
+
+		#have to reset the default values here to make copies of these objects
+		self.people=people if people != None else dict() 
 		self.variants=variants if variants != None else set()
 		self.graph=graph if graph != None else nx.DiGraph()
 
@@ -51,17 +53,17 @@ class Pedigree(object):
 		peoplefile=None
 
 		#load the input tsv into a pandas array
-		if header:
-			peoplefile = pd.read_table(path)
+		if header: #if header present
+			peoplefile = pd.read_table(path) #pandas read input
 			assert set(column_names).issubset(set(peoplefile.columns)), """Column titles must include: name, gender, father_name, mother_name. 
 		    You provided: %s""" % str(peoplefile.columns)
-			peoplefile = peoplefile[column_names]
+			peoplefile = peoplefile[column_names] #subset these columns
 		else:
-			peoplefile = pd.read_table(path,names=column_names,usecols=range(0,4),header=None)
+			peoplefile = pd.read_table(path,names=column_names,usecols=range(0,4),header=None) #if you don't have it, assume the first columns
 		peoplefile["mother_name"] = peoplefile.apply(lambda x: 
-										   x["mother_name"] if type(x["mother_name"])!=float else None,axis=1)
+										   x["mother_name"] if type(x["mother_name"])!=float else None,axis=1) #change the NaNs to None
 		peoplefile["father_name"] = peoplefile.apply(lambda x: 
-										   x["father_name"] if type(x["father_name"])!=float else None,axis=1)
+										   x["father_name"] if type(x["father_name"])!=float else None,axis=1) #change the NaNs to None
 
 		# check that each person is represented in the database and that each person name is unique
 		assert len(set(peoplefile["name"])) == len(peoplefile["name"]), "You have duplicate 'name's in your input."
@@ -71,11 +73,11 @@ class Pedigree(object):
 		These parents are not represented: %s""" % (set(peoplefile["mother_name"]).
 													union(set(peoplefile["father_name"])).
 													difference(set(peoplefile["name"])))
-		# check that graph is a DAG
+		# check that graph is a DAG using networkx
 		for ix,row in peoplefile.iterrows():
 			self.graph.add_node(row["name"],{"gender":row["gender"]})
-			if row["mother_name"] != None: self.graph.add_edge(row["mother_name"], row["name"])
-			if row["father_name"] != None: self.graph.add_edge(row["father_name"], row["name"])
+			if row["mother_name"] != None: self.graph.add_edge(row["mother_name"], row["name"]) #add edges to graph representing relationships
+			if row["father_name"] != None: self.graph.add_edge(row["father_name"], row["name"]) #add edges to graph representing relationships
 		assert nx.is_directed_acyclic_graph(self.graph), """You have an error in your pedigree.
 		You did not provide a directed acyclic graph (pedigree is impossible)."""
 
@@ -86,14 +88,16 @@ class Pedigree(object):
 			we should store the graph representation as well.
 			"""
 			# create the people objects as nodes, don't worry about setting parents yet
+			count = 0
 			for ix,row in peoplefile.iterrows():
+				count += 1
 				self.people[row["name"]] = Person(name=row["name"],
 											gender=row["gender"],
 											mother=None,
 											father=None
 										   )
 		except AssertionError as msg:
-			print("ERROR:: line %s in %s :: %s"%(ix,path,msg))
+			print("ERROR:: record %d in %s :: %s"%(count,path,msg)) #print an error indicating the line number in the file
 			raise
 
 		# traverse the graph from top to bottom to save time and to do this systematically
@@ -119,19 +123,22 @@ class Pedigree(object):
 		5: person (the name of the person the variant is associated with)
 		Denote presence of header with header=True.
 		"""
+
+		#check we already ran load_people()
 		assert len(self.people) > 0, "you must load the people into the dataset first"
 
+		#check columns
 		column_names = ["chrom","pos","ref","alt","person"]
 		assert isinstance(header,bool), "please denote header as True or False"
 		variantfile=None
 
-		if header:
+		if header: #if header is True
 			variantfile = pd.read_table(path)
 			assert set(column_names).issubset(set(variantfile.columns)), """Column titles must include: "chrom","pos","ref","alt","person" 
 		    You provided: %s""" % str(variantfile.columns)
 			variantfile = variantfile[column_names]
 		else:
-			variantfile = pd.read_table(path,names=column_names,usecols=range(0,5),header=None)
+			variantfile = pd.read_table(path,names=column_names,usecols=range(0,5),header=None) #only use first 5 columns
 
 		#replace NaN with None
 		variantfile["person"] = variantfile.apply(lambda x: 
@@ -143,14 +150,15 @@ class Pedigree(object):
 		assert any(variantfile.duplicated(subset=["chrom","pos","person"]))==False,"""Duplicate variants for each individual exist in the dataset.
 		First example: %s""" % variantfile[variantfile.duplicated(subset=["chrom","pos","person"])].head(1)
 
+		# add variants to the dataset
 		for ix,row in variantfile.iterrows():
 			variant = Variant(row["chrom"],
 			                          row["pos"],
 			                          ref=row["ref"],
 			                          alt=row["alt"],
 			                          person=self.people[row["person"]])
-			self.people[row["person"]].add_variant(variant)
-			self.variants.add(variant)
+			self.people[row["person"]].add_variant(variant) #add each variant to the person
+			self.variants.add(variant) #add a list of variants as well
 		return None
 
 class Variant(object):
@@ -162,7 +170,8 @@ class Variant(object):
 		alt (:obj:`str`): alternate/variant allele at that position
 	'''
 
-	_chrom_sizes = {'chr1': 248956422,
+	## default chromosome sizes based on hg38
+	_chrom_sizes = {'chr1': 248956422, 
 	 'chr10': 133797422,
 	 'chr11': 135086622,
 	 'chr12': 133275309,
@@ -185,7 +194,7 @@ class Variant(object):
 	 'chr8': 145138636,
 	 'chr9': 138394717,
 	 'chrX': 156040895,
-	 'chrY': 57227415}
+	 'chrY': 57227415} 
 
 	def __init__(self,chrom,pos,alt,ref=None,person=None,sanity=True):
 		''' Creates a Variant class (represents single SNP)
@@ -193,7 +202,7 @@ class Variant(object):
 		Variant __str__ -> string representation
 		'''
 		if sanity:
-			## assertions to check input
+			## assertions to check input, can turn off with sanity=False
 			assert chrom in self._chrom_sizes.keys(), "chrom %s not found" % chrom
 			assert isinstance(pos,int), "pos must be type int, got type %s" % type(pos)
 			assert (pos>=0)&(pos<self._chrom_sizes[chrom]),"pos must be < chrom size, chrom %s is %d, pos is %d"%(chrom,self._chrom_sizes[chrom],pos)
@@ -213,6 +222,7 @@ class Variant(object):
 		self.person = person if person != None else None
 
 	def __repr__(self):
+		'''A representation of a Variant object'''
 		if self.ref!=None:
 			return "<Variant at %s, %s:%d:%s->%s, belongs to:%s>" % (str(id(self)),self.chrom,self.pos,self.ref,self.alt,str(self.person))
 		else:
@@ -231,6 +241,8 @@ class Person(object):
 		children (:obj:`set` of `Person`): a person's children
 		variants (:obj:`list` of :obj:`Variant`s, optional): variants associated with the person
 	"""
+
+	# default gender types
 	_genders = {
 		"M":"male","m":"male","male":"male",
 		"F":"female","f":"female","female":"female"
@@ -250,7 +262,7 @@ class Person(object):
 			 children (:obj:`set` of :obj:`Person`, optional): children associated with the person
 		"""
 		if sanity:
-			## assertions to check input
+			## assertions to check input, sanity=False to disable
 			assert isinstance(name,str),"name must be type str, got type %s" % type(name)
 			assert (len(name) > 0)&(len(name)<=255), "name must be between 1 and 255 characters"
 			assert gender in self._genders.keys(),"gender must be one of %s" % str(self._genders.keys())
@@ -276,8 +288,9 @@ class Person(object):
 			if (father != None)&(children != None):
 				assert father not in children,"attempt to set father and child to same, Person %s"%str(father)
 				#TODO: do some recursive matching to make sure you have a DAG
+		
 		self.name = name
-		self.gender = self._genders[gender]
+		self.gender = self._genders[gender] #already checked that it exists here
 
 		self.mother = None
 		self.father = None
@@ -289,8 +302,7 @@ class Person(object):
 		if variants != None: self.add_variants(variants) 
 
 	def __repr__(self):
-		""" Provide a string representation of this person
-		"""
+		""" Provide a string representation of this person"""
 		return "<Person at {}: name: {}; gender: {}; mother {}; father {}>".format(
 			str(id(self)),
 			self.name,
@@ -299,6 +311,7 @@ class Person(object):
 			Person.get_persons_name(self.father))
 
 	def __str__(self):
+		'''A representation of a Person object'''
 		return self.__repr__()
 
 	# a method annotated with '@staticmethod' is a 'static method' that does not receive an
@@ -315,7 +328,9 @@ class Person(object):
 			return 'NA'
 		return person.name
 
+
 	def set_mother(self,mother):
+		'''sets the mother of this person using a Person() object, modifying the child in the mothers if necessary'''
 		if mother != None:
 			assert isinstance(mother, Person), "mother should be set to a Person object, not %s" % type(mother)
 			if self.mother != None: self.mother.children.remove(self)
@@ -323,6 +338,7 @@ class Person(object):
 			self.mother = mother
 
 	def set_father(self,father):
+		'''sets the father of this person using a Person() object, modifying the child in the fathers if necessary'''
 		if father != None:
 			assert isinstance(father, Person), "father should be set to a Person object, not %s" % type(father)
 			if self.father != None: self.father.children.remove(self)
@@ -330,16 +346,19 @@ class Person(object):
 			self.father = father
 
 	def remove_mother(self):
+		'''remove the mother-child relationship in this object and the mother'''
 		self.mother.children.remove(self)
 		self.mother = None
 		return None
 
 	def remove_father(self):
+		'''remove the father-child relationship in this object and the father'''
 		self.father.children.remove(self)
 		self.father = None
 		return None
 
 	def add_variant(self,variant):
+		'''add a variant to this person's variants, checking at runtime that it has a unique chrom and pos.'''
 		assert isinstance(variant,Variant), "input variant must be type Variant, not %s" % type(variant)
 		variant.person = self
 		variant_positions = [(v.chrom,v.pos) for v in self.variants if v != None]
@@ -348,26 +367,31 @@ class Person(object):
 		return None
 
 	def add_variants(self,variants):
+		'''add a list of Variants to this person.'''
 		assert isinstance(variants,list),"variants must be a list"
 		for v in variants:
 			self.add_variant(v)
 		return None
 
 	def remove_variant(self,variant):
+		'''find and remove a particular Variant from the person.'''
 		assert isinstance(variant,Variant), "input variant must be type Variant, not %s" % type(variant)
 		self.variant.person = None
 		if variant in self.variants:
 			self.variants.pop(variant)
 
 	def list_variants(self):
+		'''return a list() of variants from this person'''
 		return list(self.variants)
 
 	def siblings(self):
+		'''return full-siblings only of this person'''
 		mother_children = self.mother.children if self.mother else set()
 		father_children = self.father.children if self.father else set()
 		return mother_chldren.intersection(father_children)
 
 	def half_siblings(self):
+		'''return half-siblings only of this person'''
 		mother_children = self.mother.children if self.mother else set()
 		father_children = self.father.children if self.father else set()
 		mother_half = mother_chldren.difference(father_children)
