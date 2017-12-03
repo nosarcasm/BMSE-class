@@ -68,12 +68,12 @@ class Pedigree(object):
 		assert set(peoplefile["mother_name"]). \
 			  union(set(peoplefile["father_name"])).difference(set([None])). \
 			  issubset(set(peoplefile["name"])), """mothers and fathers must also have their own rows.
-											   These parents are not represented: %s""" % (set(peoplefile["mother_name"]).
-																							union(set(peoplefile["father_name"])).
-																							difference(set(peoplefile["name"])))
+		These parents are not represented: %s""" % (set(peoplefile["mother_name"]).
+													union(set(peoplefile["father_name"])).
+													difference(set(peoplefile["name"])))
 		# check that graph is a DAG
 		for ix,row in peoplefile.iterrows():
-			pg.add_node(row["name"],{"gender":row["gender"]})
+			self.graph.add_node(row["name"],{"gender":row["gender"]})
 			if row["mother_name"] != None: self.graph.add_edge(row["mother_name"], row["name"])
 			if row["father_name"] != None: self.graph.add_edge(row["father_name"], row["name"])
 		assert nx.is_directed_acyclic_graph(self.graph), """You have an error in your pedigree.
@@ -93,7 +93,7 @@ class Pedigree(object):
 											father=None
 										   )
 		except AssertionError as msg:
-			print("ERROR:: line %d in %s :: %s"%(ix,path,msg))
+			print("ERROR:: line %s in %s :: %s"%(ix,path,msg))
 			raise
 
 		# traverse the graph from top to bottom to save time and to do this systematically
@@ -141,7 +141,7 @@ class Pedigree(object):
 		These people could not be found: %s""" % set(variantfile["person"]).difference(set([None])).difference(self.people.keys())
 
 		assert any(variantfile.duplicated(subset=["chrom","pos","person"]))==False,"""Duplicate variants for each individual exist in the dataset.
-		First example: %s""" % variantfile[variantfile.duplicated(subset=["chrom","pos","person"])].loc[0,]
+		First example: %s""" % variantfile[variantfile.duplicated(subset=["chrom","pos","person"])].head(1)
 
 		for ix,row in variantfile.iterrows():
 			variant = Variant(row["chrom"],

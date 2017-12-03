@@ -1,0 +1,13 @@
+name	gender	mother_name	father_name
+Simin	F		
+Akbar	M		
+Alice Gayle	F		
+Ben	M		
+Lily	F	Simin	Akbar
+Daryl	M	Alice Gayle	Ben
+Norman	M	Alice Gayle	Ben
+David	M	Alice Gayle	Ben
+Sheila	F	Alice Gayle	Ben
+Ryan	M	Lily	Daryl
+Laura	F	Lily	Daryl
+Ryan	M	Lily	Daryl

@@ -1,0 +1,5 @@
+chrom	pos	ref	alt	person
+chr1	3000	A	T	Ryan
+chr2	4000	C	G	Laura
+chr4	5000	T	A	Ryan
+chr4	5001	Z	A	Ryan
