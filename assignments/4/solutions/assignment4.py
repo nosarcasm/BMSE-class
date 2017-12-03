@@ -6,95 +6,37 @@
 :License: MIT
 """
 
-''' From https://stackoverflow.com/questions/2825452/correct-approach-to-validate-attributes-of-an-instance-of-class
-
-You can use Python properties to cleanly apply rules to each field separately, 
-and enforce them even when client code tries to change the field:
-
-class Spam(object):
-	def __init__(self, description, value):
-		self.description = description
-		self.value = valuemess
-
-
-	@property
-	def description(self):
-		return self._description
-
-	@description.setter
-	def description(self, d):
-		if not d: raise Exception("description cannot be empty")
-		self._description = d
-
-	@property
-	def value(self):
-		return self._value
-
-	@value.setter
-	def value(self, v):
-		if not (v > 0): raise Exception("value must be greater than zero")
-		self._value = v
-
-An exception will be thrown on any attempt to violate the rules, 
-even in the __init__ function, in which case object construction will fail.
-
-UPDATE: Sometime between 2010 and now, I learned about operator.attrgetter:
-
-import operator
-
-class Spam(object):
-	def __init__(self, description, value):
-		self.description = description
-		self.value = value
-
-	description = property(operator.attrgetter('_description'))
-
-	@description.setter
-	def description(self, d):
-		if not d: raise Exception("description cannot be empty")
-		self._description = d
-
-	value = property(operator.attrgetter('_value'))
-
-	@value.setter
-	def value(self, v):
-		if not (v > 0): raise Exception("value must be greater than zero")
-		self._value = v
-'''
-
 import pandas as pd
 import networkx as nx
 
 class Pedigree(object):
+	''' Pedigree() Creates class that loads person and variant data from files
+	::Functions::
+	load_people(path)
+		person name, gender, father name, mother name
+		father and mother may be blank (missing)
+		columns in the files are tab-separated (headers??)
+		must check: unique person names, parents are in loaded data, genders OK
+			reject those that fail, output nicely formatted error msgs
+	load_variants(path)
+		chrom, location, ref, alt, person
+		must check:
+			chrom name is valid
+				against hg38 = will be hard-coded for the homework
+			nucleotide is on chrom (nucleotide position is valid and 0-based)
+			variant nucleotide is valid (don't worry about the reference!)
+			variant different than reference
+			person is in the dataset ?
+				can check after the fact!!
+	path is a .tsv
+	'''
 
 	def __init__(self,people=None,variants=None,graph=None):
-		self.people=people if people != None else set()
+		"""A blank Pedigree object for loading people and variants"""
+		self.people=people if people != None else dict()
 		self.variants=variants if variants != None else set()
 		self.graph=graph if graph != None else nx.DiGraph()
 
-	## TODO: Create class that loads person and variant data from files
-	'''
-		::Functions::
-		load_people(path)
-			person name, gender, father name, mother name
-			father and mother may be blank (missing)
-			columns in the files are tab-separated (headers??)
-			must check: unique person names, parents are in loaded data, genders OK
-				reject those that fail, output nicely formatted error msgs
-		load_variants(path)
-			chrom, location, ref, alt, person
-			must check:
-				chrom name is valid
-					against hg38 = will be hard-coded for the homework
-				nucleotide is on chrom (nucleotide position is valid and 0-based)
-				variant nucleotide is valid (don't worry about the reference!)
-				variant different than reference
-				person is in the dataset ?
-					can check after the fact!!
-		path is a .tsv
-	'''
-
-	#TODO
 	def load_people(self,path,header=True):
 		'''load_people() Takes a filename as input that includes the following 
 		tab-separated columns in this order:
@@ -158,7 +100,6 @@ class Pedigree(object):
 		for node in nx.topological_sort(self.graph): #this should return the top ancestor first
 			parent = self.people[node] # get the person object
 			first_order_descendents = self.graph.edge[node] #these are the children of that node
-			print(first_order_descendents)
 			if parent.gender == "female":
 				for child in first_order_descendents:
 					self.people[child].set_mother(parent)
@@ -168,9 +109,48 @@ class Pedigree(object):
 
 		return None
 
-	#TODO
-	def load_variants(self,path):
-		if self.people 
+	def load_variants(self,path,header=True):
+		"""load_variants() Takes a filename as input that includes the following 
+		tab-separated columns in this order:
+		1: chrom (the chromosome location, in "chr#" format)
+		2: pos (a 0-based integer location)
+		3: ref (optional, reference nucleotide)
+		4: alt (a alternate nucleotide)
+		5: person (the name of the person the variant is associated with)
+		Denote presence of header with header=True.
+		"""
+		assert len(self.people) > 0, "you must load the people into the dataset first"
+
+		column_names = ["chrom","pos","ref","alt","person"]
+		assert isinstance(header,bool), "please denote header as True or False"
+		variantfile=None
+
+		if header:
+			variantfile = pd.read_table(path)
+			assert set(column_names).issubset(set(variantfile.columns)), """Column titles must include: "chrom","pos","ref","alt","person" 
+		    You provided: %s""" % str(variantfile.columns)
+			variantfile = variantfile[column_names]
+		else:
+			variantfile = pd.read_table(path,names=column_names,usecols=range(0,5),header=None)
+
+		#replace NaN with None
+		variantfile["person"] = variantfile.apply(lambda x: 
+										   x["person"] if type(x["person"])!=float else None,axis=1)
+
+		assert set(variantfile["person"]).difference(set([None])).issubset(self.people.keys()), """Variants in input include people not loaded in pedigree. 
+		These people could not be found: %s""" % set(variantfile["person"]).difference(set([None])).difference(self.people.keys())
+
+		assert any(variantfile.duplicated(subset=["chrom","pos","person"]))==False,"""Duplicate variants for each individual exist in the dataset.
+		First example: %s""" % variantfile[variantfile.duplicated(subset=["chrom","pos","person"])].loc[0,]
+
+		for ix,row in variantfile.iterrows():
+			variant = Variant(row["chrom"],
+			                          row["pos"],
+			                          ref=row["ref"],
+			                          alt=row["alt"],
+			                          person=self.people[row["person"]])
+			self.people[row["person"]].add_variant(variant)
+			self.variants.add(variant)
 		return None
 
 class Variant(object):
@@ -180,12 +160,6 @@ class Variant(object):
 		pos (:obj:`int`): position that the variant is on the chromosome (0-indexed)
 		ref (:obj:`str`): reference/null allele at that position
 		alt (:obj:`str`): alternate/variant allele at that position
-	'''
-
-	## TODO: Create a Variant class (represents single SNP)
-	'''
-		Each is stored with chrom, pos (ONLY ONE POSITION AS INT), ref, alt
-		Variant __str__ -> string representation
 	'''
 
 	_chrom_sizes = {'chr1': 248956422,
@@ -214,6 +188,10 @@ class Variant(object):
 	 'chrY': 57227415}
 
 	def __init__(self,chrom,pos,alt,ref=None,person=None,sanity=True):
+		''' Creates a Variant class (represents single SNP)
+		Each is stored with chrom, pos (ONLY ONE POSITION AS INT), ref, alt
+		Variant __str__ -> string representation
+		'''
 		if sanity:
 			## assertions to check input
 			assert chrom in self._chrom_sizes.keys(), "chrom %s not found" % chrom
@@ -239,6 +217,9 @@ class Variant(object):
 			return "<Variant at %s, %s:%d:%s->%s, belongs to:%s>" % (str(id(self)),self.chrom,self.pos,self.ref,self.alt,str(self.person))
 		else:
 			return "<Variant at %s, %s:%d:??->%s, belongs to:%s>" % (str(id(self)),self.chrom,self.pos,self.alt,str(self.person))
+
+	def __str__(self):
+		return self.__repr__()
 
 class Person(object):
 	""" Person
@@ -304,18 +285,21 @@ class Person(object):
 		self.set_father(father)
 		self.children = children if children != None else set()
 
-		self.variants = set()
-		self.add_variants(variants)
+		self.variants = list()
+		if variants != None: self.add_variants(variants) 
 
 	def __repr__(self):
 		""" Provide a string representation of this person
 		"""
-		return "<Person at {}, name: {}: gender {}; mother {}; father {}>".format(
+		return "<Person at {}: name: {}; gender: {}; mother {}; father {}>".format(
 			str(id(self)),
 			self.name,
 			self.gender,
 			Person.get_persons_name(self.mother),
 			Person.get_persons_name(self.father))
+
+	def __str__(self):
+		return self.__repr__()
 
 	# a method annotated with '@staticmethod' is a 'static method' that does not receive an
 	# implicit first argument. Rather, it is called C.m(), where the class C identifies the
@@ -334,7 +318,6 @@ class Person(object):
 	def set_mother(self,mother):
 		if mother != None:
 			assert isinstance(mother, Person), "mother should be set to a Person object, not %s" % type(mother)
-			print("set_mother called on %s, setting mother to %s" % (self,mother))
 			if self.mother != None: self.mother.children.remove(self)
 			mother.children.add(self)
 			self.mother = mother
@@ -342,7 +325,6 @@ class Person(object):
 	def set_father(self,father):
 		if father != None:
 			assert isinstance(father, Person), "father should be set to a Person object, not %s" % type(father)
-			print("set_father called on %s, setting father to %s" % (self, father))
 			if self.father != None: self.father.children.remove(self)
 			father.children.add(self)
 			self.father = father
@@ -359,7 +341,10 @@ class Person(object):
 
 	def add_variant(self,variant):
 		assert isinstance(variant,Variant), "input variant must be type Variant, not %s" % type(variant)
-		self.variants.add(variant)
+		variant.person = self
+		variant_positions = [(v.chrom,v.pos) for v in self.variants if v != None]
+		assert (variant.chrom, variant.pos) not in variant_positions, "variant already exists at %s:%d"%(variant.chrom,variant.pos) # sanity check
+		self.variants.append(variant)
 		return None
 
 	def add_variants(self,variants):
@@ -370,26 +355,24 @@ class Person(object):
 
 	def remove_variant(self,variant):
 		assert isinstance(variant,Variant), "input variant must be type Variant, not %s" % type(variant)
+		self.variant.person = None
 		if variant in self.variants:
-			self.variants.remove(variant)
+			self.variants.pop(variant)
 
 	def list_variants(self):
-		return str(self.variants)
+		return list(self.variants)
 
-	# TODO: create a 'siblings' method that returns a person's siblings, and write a 'half_siblings'
-	# method that returns a person's half-siblings.
-
-	#TODO
 	def siblings(self):
-		return None
+		mother_children = self.mother.children if self.mother else set()
+		father_children = self.father.children if self.father else set()
+		return mother_chldren.intersection(father_children)
 
-	#TODO
 	def half_siblings(self):
-		return None
-
-	# TODO: EXTRA CREDIT: implement this descendents method, which has analogous semantics to the
-	# ancestors method below. The implementation may use a while loop or be recursive. Use
-	# your 'descendents' method to implement 'children', 'grand_children', and 'all_descendents'.
+		mother_children = self.mother.children if self.mother else set()
+		father_children = self.father.children if self.father else set()
+		mother_half = mother_chldren.difference(father_children)
+		father_half = father_children.difference(mother_children)
+		return father_half.union(mother_half)
 
 	# TODO: EXTRA CREDIT: can a cycle in the ancestry graph create an infinite loop?
 	# if so, avoid this problem.
@@ -404,6 +387,17 @@ class Person(object):
 			if child.gender == 'male':
 				sons.append(child)
 		return sons
+
+	def daughters(self):
+		""" Get this person's daughters
+		Returns:
+			:obj:`list` of `Person`: the person's daughters
+		"""
+		daughters = []
+		for child in self.children:
+			if child.gender == 'female':
+				daughters.append(child)
+		return daughters
 
 	def grandparents_structured(self):
 		''' Provide this person's grandparents
@@ -423,7 +417,7 @@ class Person(object):
 			grandparents.extend([None, None])
 		return tuple(grandparents)
 
-	def descendants(self, min_depth, max_depth=None):
+	def descendants(self, min_depth=1, max_depth=None):
 		""" Return this person's descendants within a generational depth range
 		Obtain descendants whose generational depth satisfies `min_depth` <= depth <= `max_depth`.
 		E.g., this person's children would be obtained with `min_depth` = 1, and this person's
@@ -441,9 +435,37 @@ class Person(object):
 		Raises:
 			:obj:`ValueError`: if `max_depth` < `min_depth`
 		"""
-		pass
+		if max_depth is not None:
+			if max_depth < min_depth:
+					raise ValueError("max_depth ({}) cannot be less than min_depth ({})".format(
+						max_depth, min_depth))
+		else:
+			max_depth = min_depth # just collect one
 
-	def ancestors(self, min_depth, max_depth=None):
+		collected_descendants = set()
+		return self._descendants(collected_descendants, min_depth, max_depth)
+
+	def _descendants(self, collected_descendants, min_depth, max_depth):
+		""" Obtain this person's descendants who lie within the generational depth [min_depth, max_depth]
+		This is a private, recursive method that recurses through the descendants via children references.
+		Args:
+			collected_descendants (:obj:`set`): descendants collected thus far by this method
+			min_depth (:obj:`int`): see `descendants()`
+			max_depth (:obj:`int`): see `descendants()`
+		Returns:
+			:obj:`set` of `Person`: this person's descendants
+		Raises:
+			:obj:`ValueError`: if `max_depth` < `min_depth`
+		"""
+		assert self not in collected_descendants, "the pedigree is not a DAG. self is descendant of self."
+		if min_depth <= 0:
+			collected_descendants.add(self)
+		if 0 < max_depth:
+			for child in self.children:
+				child._descendants(collected_descendants, min_depth-1, max_depth-1)
+		return collected_descendants
+
+	def ancestors(self, min_depth=1, max_depth=None):
 		""" Return this person's ancestors within a generational depth range
 		Obtain ancestors whose generational depth satisfies `min_depth` <= depth <= `max_depth`. E.g.,
 		a person's parents would be obtained with `min_depth` = 1, and this person's parents and
@@ -460,6 +482,7 @@ class Person(object):
 		Raises:
 			:obj:`ValueError`: if `max_depth` < `min_depth`
 		"""
+		assert self not in collected_ancestors, "the pedigree is not a DAG. self is ancestor of self."
 		if max_depth is not None:
 			if max_depth < min_depth:
 					raise ValueError("max_depth ({}) cannot be less than min_depth ({})".format(
