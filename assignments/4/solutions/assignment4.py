@@ -2,8 +2,11 @@
 
 """ Person, with heredity and other characteristics
 :Authors: Ryan Neff <ryan.neff@icahn.mssm.edu>, Arthur Goldberg <Arthur.Goldberg@mssm.edu>
-:Date: 2017-11-16
+:Date: 2017-12-02
 :License: MIT
+
+Ready for submit!
+
 """
 
 import pandas as pd #for importing tsv files
