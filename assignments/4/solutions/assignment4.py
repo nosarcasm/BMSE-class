@@ -63,10 +63,8 @@ class Pedigree(object):
 			peoplefile = peoplefile[column_names] #subset these columns
 		else:
 			peoplefile = pd.read_table(path,names=column_names,usecols=range(0,4),header=None) #if you don't have it, assume the first columns
-		peoplefile["mother_name"] = peoplefile.apply(lambda x: 
-										   x["mother_name"] if type(x["mother_name"])!=float else None,axis=1) #change the NaNs to None
-		peoplefile["father_name"] = peoplefile.apply(lambda x: 
-										   x["father_name"] if type(x["father_name"])!=float else None,axis=1) #change the NaNs to None
+		peoplefile["mother_name"] = peoplefile.apply(lambda x: x["mother_name"] if type(x["mother_name"])!=float else None,axis=1) #change the NaNs to None
+		peoplefile["father_name"] = peoplefile.apply(lambda x: x["father_name"] if type(x["father_name"])!=float else None,axis=1) #change the NaNs to None
 
 		# check that each person is represented in the database and that each person name is unique
 		assert len(set(peoplefile["name"])) == len(peoplefile["name"]), "You have duplicate 'name's in your input."
