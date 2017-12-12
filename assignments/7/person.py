@@ -126,6 +126,70 @@ class Person(object):
         mother.children.add(self)
         self.mother = mother
 
+    def set_father(self, father):
+        """ Set the father of this person
+
+        Args:
+             father (:obj:`Person`): this person's father
+
+        Raises:
+            :obj:`PersonError`: if `father` is not male
+        """
+        if father.gender != Gender.MALE:
+            raise PersonError("father named '{}' is not male".format(father.name))
+        father.children.add(self)
+        self.father = father
+
+    def remove_mother(self):
+        '''remove the mother-child relationship in this object and the mother'''
+        if self.mother==None:
+            raise PersonError("mother not set for person named %s" % self.name)
+        if self not in self.mother.children:
+            raise PersonError("mother named %s does not have person named %s in children"%(self.mother.name, self.name))
+        self.mother.children.remove(self)
+        self.mother = None
+        return None
+
+    def remove_father(self):
+        '''remove the father-child relationship in this object and the father'''
+        if self.father==None:
+            raise PersonError("father not set for person named %s" % self.name)
+        if self not in self.father.children:
+            raise PersonError("father named %s does not have person named %s in children"%(self.father.name, self.name))
+        self.father.children.remove(self)
+        self.father = None
+        return None
+
+    #TODO: create add_child(), should use set_father() and set_mother() to establish parent-child relationships, raise exception if gender is null for child (m and f are taken care of)
+    def add_child(self, child):
+        ''' Sets the child of this person
+
+        Args:
+            child (:obj:`Person`): this person's child
+
+        Raises:
+            :obj:`PersonError`: if `child` has null gender
+            :obj:`PersonError`: if `child` already has a mother or father set, depending on this person's gender
+            :obj:`PersonError`: if `child` is already in person's descendents (including children)
+            :obj:`PersonError`: if `child` is in person's ancestors (cycle detection)
+        '''
+        if child.gender == UNKNOWN: #check for null gender
+            raise PersonError("child %s gender must be male or female, not unknown"%child.name)
+        if (child.mother != None)&(self.gender == Gender.FEMALE): #check if we're about to overwrite child's mother
+            raise PersonError("child %s already has mother %s set"%(child.name, child.mother.name))
+        if (child.father != None)&(self.gender == Gender.MALE): #check if we're about to overwrite child's father
+            raise PersonError("child %s already has father %s set"%(child.name, child.father.name))
+        if child in self.descendants(min_depth=1, max_depth=float(inf)): #check all descendants for us
+            raise PersonError("child %s is already in descendants of person %s"%(child.name, self.name))
+        if child in self.ancestors(min_depth=1, max_depth=float(int)): #check all ancestors for us
+            raise PersonError("child %s is an ancestor of person %s"%(child.name, self.name))
+        if self.gender == Gender.FEMALE:
+            child.set_mother(self)
+        elif self.gender == Gender.MALE:
+            child.set_father(self)
+        self.children.add(child)
+        return None
+
     def __str__(self):
         """ Provide a string representation of this person
         """
@@ -189,6 +253,54 @@ class Person(object):
                 if parent is not None:
                     parent._ancestors(collected_ancestors, min_depth-1, max_depth-1)
         return collected_ancestors
+
+    def descendants(self, min_depth=1, max_depth=None):
+        """ Return this person's descendants within a generational depth range
+        Obtain descendants whose generational depth satisfies `min_depth` <= depth <= `max_depth`.
+        E.g., this person's children would be obtained with `min_depth` = 1, and this person's
+        grandchildren and great-grandchildren would be obtained with `min_depth` = 3 and
+        `max_depth` = 3.
+        Args:
+            min_depth (:obj:`int`): the minimum depth of descendants which should be provided;
+                this person's depth is 0, their children's depth is 1, etc.
+            max_depth (:obj:`int`, optional): the minimum depth of descendants which should be
+                provided; if `max_depth` is not provided, then `max_depth` == `min_depth` so that only
+                descendants at depth == `min_depth` will be provided; a `max_depth` of infinity will
+                obtain all descendants at depth >= `min_depth`.
+        Returns:
+            :obj:`set` of `Person`: this person's descendants
+        Raises:
+            :obj:`ValueError`: if `max_depth` < `min_depth`
+        """
+        if max_depth is not None:
+            if max_depth < min_depth:
+                    raise ValueError("max_depth ({}) cannot be less than min_depth ({})".format(
+                        max_depth, min_depth))
+        else:
+            max_depth = min_depth # just collect one
+
+        collected_descendants = set()
+        return self._descendants(collected_descendants, min_depth, max_depth)
+
+    def _descendants(self, collected_descendants, min_depth, max_depth):
+        """ Obtain this person's descendants who lie within the generational depth [min_depth, max_depth]
+        This is a private, recursive method that recurses through the descendants via children references.
+        Args:
+            collected_descendants (:obj:`set`): descendants collected thus far by this method
+            min_depth (:obj:`int`): see `descendants()`
+            max_depth (:obj:`int`): see `descendants()`
+        Returns:
+            :obj:`set` of `Person`: this person's descendants
+        Raises:
+            :obj:`ValueError`: if `max_depth` < `min_depth`
+        """
+        assert self not in collected_descendants, "the pedigree is not a DAG. self is descendant of self."
+        if min_depth <= 0:
+            collected_descendants.add(self)
+        if 0 < max_depth:
+            for child in self.children:
+                child._descendants(collected_descendants, min_depth-1, max_depth-1)
+        return collected_descendants
 
     def parents(self):
         ''' Provide this person's parents
