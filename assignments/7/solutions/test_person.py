@@ -2,8 +2,8 @@
 
 """ Test Person
 
-:Author: Arthur Goldberg <Arthur.Goldberg@mssm.edu>
-:Date: 2017-12-09
+:Authors: Ryan Neff <ryan.neff@icahn.mssm.edu>, Arthur Goldberg <Arthur.Goldberg@mssm.edu>
+:Date: 2017-12-12
 :Copyright: 2017, Arthur Goldberg
 :License: MIT
 """
@@ -49,6 +49,7 @@ class TestPerson(unittest.TestCase):
                 add_parents(dad, depth+1, max_depth)
                 add_parents(mom, depth+1, max_depth)
         add_parents(self.root_child, 0, self.generations)
+        self.head_father = self.root_child.father.father.father
 
     def test_set_mother(self):
         self.child.set_mother(self.mom)
@@ -144,28 +145,56 @@ class TestPerson(unittest.TestCase):
         self.assertIn('in children', str(context.exception))
 
     def test_get_persons_name(self):
-        pass
+        self.assertEqual(Person.get_persons_name(self.mom),"mom")
+        self.assertEqual(Person.get_persons_name(None),"NA")
 
     def test_grandparents(self):
-        pass
+        grandparents_names = set([Person.get_persons_name(i) for i in self.root_child.grandparents()])
+        true_grandparents = set(['root_child_mom_mom', 'root_child_dad_mom', 
+                                'root_child_mom_dad', 'root_child_dad_dad'])
+        self.assertEqual(grandparents_names,true_grandparents)
 
     def test_all_grandparents(self):
-        pass
+        all_grandparents_names = set([Person.get_persons_name(i) for i in self.root_child.all_grandparents()])
+        true_all_grandparents = set(['root_child_dad_mom_dad', 'root_child_dad_dad_dad', 'root_child_dad_mom_mom', 
+                            'root_child_mom_dad_dad', 'root_child_mom_dad_mom', 'root_child_mom_mom_dad', 
+                            'root_child_mom_mom_mom', 'root_child_dad_dad_mom'])
+        self.assertEqual(all_grandparents_names,true_all_grandparents)
 
     def test_all_ancestors(self):
-        pass
+        all_ancestors = set([Person.get_persons_name(i) for i in self.root_child.all_ancestors()])
+        true_all_ancestors = {'root_child_mom_dad', 'root_child_mom_dad_mom', 'root_child_mom_mom', 
+                            'root_child_dad_dad_dad', 'root_child_dad_mom', 'root_child_mom', 'root_child_mom_dad_dad', 
+                            'root_child_dad_mom_dad', 'root_child_dad_dad', 'root_child_mom_mom_mom', 
+                            'root_child_dad_mom_mom', 'root_child_dad', 'root_child_mom_mom_dad', 
+                            'root_child_dad_dad_mom'}
+        self.assertEqual(all_ancestors, true_all_ancestors)
+
+    def test_parents(self):
+        parents = set([Person.get_persons_name(i) for i in self.root_child.parents()])
+        true_parents = {'root_child_dad', 'root_child_mom'}
+        self.assertEqual(parents, true_parents)
 
     def test_ancestors(self):
+        '''ancestors code has already been 100% covered 
+        in other unittests (multiple levels and depths)'''
         pass
 
     def test_ancestors_error(self):
-        pass
+        with self.assertRaises(PersonError) as context:
+            self.root_child.ancestors(min_depth=2,max_depth=1)
+        self.assertIn('max_depth (1) cannot be less than min_depth (2)', str(context.exception))
 
     def test_descendants(self):
-        pass
+        all_descendants = set([Person.get_persons_name(i) 
+                              for i in self.head_father.descendants(min_depth=1,max_depth=float('inf'))])
+        true_descendants = {'root_child_dad_dad', 'root_child_dad', 'root_child'}
+        self.assertEqual(all_descendants, true_descendants)
 
     def test_descendants_error(self):
-        pass
+        with self.assertRaises(PersonError) as context:
+            self.head_father.descendants(min_depth=2,max_depth=1)
+        self.assertIn('max_depth (1) cannot be less than min_depth (2)', str(context.exception))
 
 if __name__ == '__main__':
     unittest.main()

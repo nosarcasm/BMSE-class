@@ -2,8 +2,8 @@
 
 """ Person, with heredity and other characteristics
 
-:Author: Arthur Goldberg <Arthur.Goldberg@mssm.edu>
-:Date: 2017-12-09
+:Authors: Ryan Neff <ryan.neff@icahn.mssm.edu>, Arthur Goldberg <Arthur.Goldberg@mssm.edu>
+:Date: 2017-12-12
 :Copyright: 2017, Arthur Goldberg
 :License: MIT
 """
@@ -103,6 +103,18 @@ class Person(object):
         self.father = father
         self.children = set()
 
+    def __repr__(self):
+        """ Provide a string representation of this person"""
+        return "<Person at {}: name: {}; gender: {}>".format(
+            str(id(self)),
+            self.name,
+            self.gender
+            )
+
+    def __str__(self):
+        '''A representation of a Person object'''
+        return self.__repr__()
+
     @staticmethod
     def get_persons_name(person):
         """ Get a person's name; if the person is not known, return 'NA'
@@ -187,7 +199,7 @@ class Person(object):
         if child in self.descendants(min_depth=1, max_depth=float('inf')): #check all descendants for us
             raise PersonError("child %s is already in descendants of person %s"%(child.name, self.name))
         #FIXED BUG from unittests: inf needs to be 'inf' in the float definition
-        if child in self.ancestors(min_depth=1, max_depth=float('inf')): #check all ancestors for us
+        if child in self.all_ancestors(): #check all ancestors for us
             raise PersonError("child %s is an ancestor of person %s"%(child.name, self.name))
         if self.gender == Gender.FEMALE:
             child.set_mother(self)
@@ -282,7 +294,7 @@ class Person(object):
         """
         if max_depth is not None:
             if max_depth < min_depth:
-                    raise ValueError("max_depth ({}) cannot be less than min_depth ({})".format(
+                    raise PersonError("max_depth ({}) cannot be less than min_depth ({})".format(
                         max_depth, min_depth))
         else:
             max_depth = min_depth # just collect one
@@ -316,7 +328,8 @@ class Person(object):
         Returns:
             :obj:`set`: this person's known parents
         '''
-        return self.ancestors(0)
+        #FIXED BUG from unittests: min_depth should start at 1
+        return self.ancestors(1)
 
     def grandparents(self):
         ''' Provide this person's known grandparents, by using ancestors()
