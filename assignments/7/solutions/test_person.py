@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 """ Test Person
 
 :Author: Arthur Goldberg <Arthur.Goldberg@mssm.edu>
@@ -31,8 +33,6 @@ class TestPerson(unittest.TestCase):
         self.mom = Person('mom', 'f')
         self.dad = Person('dad', 'm')
 
-        # TODO: uncomment these lines:: make a deep family history
-        '''
         self.generations = 4
         self.people = people = []
         self.root_child = Person('root_child', Gender.UNKNOWN)
@@ -49,14 +49,11 @@ class TestPerson(unittest.TestCase):
                 add_parents(dad, depth+1, max_depth)
                 add_parents(mom, depth+1, max_depth)
         add_parents(self.root_child, 0, self.generations)
-        '''
 
     def test_set_mother(self):
         self.child.set_mother(self.mom)
         self.assertEqual(self.child.mother, self.mom)
         self.assertIn(self.child, self.mom.children)
-
-    '''TODO: uncomment these lines!
     
     def test_set_mother_error(self):
         self.mom.gender = Gender.MALE
@@ -77,21 +74,36 @@ class TestPerson(unittest.TestCase):
 
     def test_add_child(self):
         self.assertNotIn(self.child, self.mom.children)
+        #FIXED BUG from unittests: we need to set the gender of the child too, right?
+        self.child.gender = Gender.MALE
         self.mom.add_child(self.child)
         self.assertEqual(self.child.mother, self.mom)
         self.assertIn(self.child, self.mom.children)
 
         self.assertNotIn(self.child, self.dad.children)
+        #FIXED BUG from unittests: we need to set the gender of the child too, right? 
+        #  might as well check both genders
+        self.child.gender = Gender.FEMALE
         self.dad.add_child(self.child)
         self.assertEqual(self.child.father, self.dad)
         self.assertIn(self.child, self.dad.children)
 
     def test_add_child_error(self):
+        #FIXED BUG from unittests: we need to set the gender of the child too, right? 
         self.dad.gender = Gender.UNKNOWN
+        self.child.gender = Gender.MALE
         with self.assertRaises(PersonError) as context:
             self.dad.add_child(self.child)
         self.assertIn('cannot add child', str(context.exception))
-        self.assertIn('with unknown gender', str(context.exception))
+        self.assertIn('with unknown gender of parent', str(context.exception))
+
+        #FIXED BUG from unittests: we need to set the gender of the child too, right? 
+        self.dad.gender = Gender.MALE
+        self.child.gender = Gender.UNKNOWN
+        with self.assertRaises(PersonError) as context:
+            self.dad.add_child(self.child)
+        self.assertIn('cannot add child', str(context.exception))
+        self.assertIn('with unknown gender of child', str(context.exception))
 
     def test_remove_father(self):
         self.child.set_father(self.dad)
@@ -101,13 +113,35 @@ class TestPerson(unittest.TestCase):
     def test_remove_mother(self):
         self.child.set_mother(self.mom)
         self.child.remove_mother()
-        self.assertNotIn(self.child, self.mother.children)
+        #FIXED BUG from unittests: it's self.mom, not self.mother for our test cases
+        self.assertNotIn(self.child, self.mom.children)
 
     def test_remove_father_error(self):
-        pass
+        #FIXED BUG from unittests: self.child doesn't initially have any parents set
+        with self.assertRaises(PersonError) as context:
+            self.child.remove_father()
+        self.assertIn('father not set', str(context.exception))
+
+        self.child.set_father(self.dad)
+        self.dad.children.remove(self.child)
+        with self.assertRaises(PersonError) as context:
+            self.child.remove_father()
+        self.assertIn('father named', str(context.exception))
+        self.assertIn('does not have person named', str(context.exception))
+        self.assertIn('in children', str(context.exception))
 
     def test_remove_mother_error(self):
-        pass
+        with self.assertRaises(PersonError) as context:
+            self.child.remove_mother()
+        self.assertIn('mother not set', str(context.exception))
+
+        self.child.set_mother(self.mom)
+        self.mom.children.remove(self.child)
+        with self.assertRaises(PersonError) as context:
+            self.child.remove_mother()
+        self.assertIn('mother named', str(context.exception))
+        self.assertIn('does not have person named', str(context.exception))
+        self.assertIn('in children', str(context.exception))
 
     def test_get_persons_name(self):
         pass
@@ -127,9 +161,11 @@ class TestPerson(unittest.TestCase):
     def test_ancestors_error(self):
         pass
 
-    '''
+    def test_descendants(self):
+        pass
 
-    #TODO: 
+    def test_descendants_error(self):
+        pass
 
 if __name__ == '__main__':
     unittest.main()

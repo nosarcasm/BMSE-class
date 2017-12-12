@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 """ Person, with heredity and other characteristics
 
 :Author: Arthur Goldberg <Arthur.Goldberg@mssm.edu>
@@ -35,7 +37,7 @@ class Gender(object):
         self.gender_map = {
             self.MALE:set(['male', 'm', '1']),
             self.FEMALE:set(['female', 'f', '2']),
-            self.UNKNOWN:set(['unknown', 'na', 'not specified'])
+            self.UNKNOWN:set(['unknown', 'na', 'not specified','-9','0']) #if we're following PED file format...
         }
 
     def get_gender(self, gender):
@@ -173,20 +175,26 @@ class Person(object):
             :obj:`PersonError`: if `child` is already in person's descendents (including children)
             :obj:`PersonError`: if `child` is in person's ancestors (cycle detection)
         '''
-        if child.gender == UNKNOWN: #check for null gender
-            raise PersonError("child %s gender must be male or female, not unknown"%child.name)
+        if child.gender == Gender.UNKNOWN: #check for null gender
+            #FIXED BUG from unittests: make sure to check against Gender.UNKNOWN, not UNKNOWN
+            #FIXED BUG from unittests: make sure to say "cannot add child" and "with unknown gender"
+            raise PersonError("cannot add child %s with unknown gender of child"%child.name)
         if (child.mother != None)&(self.gender == Gender.FEMALE): #check if we're about to overwrite child's mother
             raise PersonError("child %s already has mother %s set"%(child.name, child.mother.name))
         if (child.father != None)&(self.gender == Gender.MALE): #check if we're about to overwrite child's father
             raise PersonError("child %s already has father %s set"%(child.name, child.father.name))
-        if child in self.descendants(min_depth=1, max_depth=float(inf)): #check all descendants for us
+        #FIXED BUG from unittests: inf needs to be 'inf' in the float definition
+        if child in self.descendants(min_depth=1, max_depth=float('inf')): #check all descendants for us
             raise PersonError("child %s is already in descendants of person %s"%(child.name, self.name))
-        if child in self.ancestors(min_depth=1, max_depth=float(int)): #check all ancestors for us
+        #FIXED BUG from unittests: inf needs to be 'inf' in the float definition
+        if child in self.ancestors(min_depth=1, max_depth=float('inf')): #check all ancestors for us
             raise PersonError("child %s is an ancestor of person %s"%(child.name, self.name))
         if self.gender == Gender.FEMALE:
             child.set_mother(self)
         elif self.gender == Gender.MALE:
             child.set_father(self)
+        else: #gender is unknown or null
+            raise PersonError("cannot add child %s with unknown gender of parent"%child.name)
         self.children.add(child)
         return None
 
