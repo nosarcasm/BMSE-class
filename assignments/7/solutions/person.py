@@ -196,8 +196,8 @@ class Person(object):
         if (child.father != None)&(self.gender == Gender.MALE): #check if we're about to overwrite child's father
             raise PersonError("child %s already has father %s set"%(child.name, child.father.name))
         #FIXED BUG from unittests: inf needs to be 'inf' in the float definition
-        if child in self.descendants(min_depth=1, max_depth=float('inf')): #check all descendants for us
-            raise PersonError("child %s is already in descendants of person %s"%(child.name, self.name))
+        #FIXED BUG: don't need to check for descendants here, checking for ancestors 
+        #   and parent-child relationships is enough 
         #FIXED BUG from unittests: inf needs to be 'inf' in the float definition
         if child in self.all_ancestors(): #check all ancestors for us
             raise PersonError("child %s is an ancestor of person %s"%(child.name, self.name))
