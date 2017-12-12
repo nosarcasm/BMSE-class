@@ -31,7 +31,7 @@ class TestPerson(unittest.TestCase):
         self.mom = Person('mom', 'f')
         self.dad = Person('dad', 'm')
 
-        # make a deep family history
+        # TODO: uncomment these lines:: make a deep family history
         '''
         self.generations = 4
         self.people = people = []
@@ -56,12 +56,25 @@ class TestPerson(unittest.TestCase):
         self.assertEqual(self.child.mother, self.mom)
         self.assertIn(self.child, self.mom.children)
 
+    '''TODO: uncomment these lines!
+    
+    def test_set_mother_error(self):
         self.mom.gender = Gender.MALE
         with self.assertRaises(PersonError) as context:
             self.child.set_mother(self.mom)
         self.assertIn('is not female', str(context.exception))
 
-    '''
+    def test_set_father(self):
+        self.child.set_father(self.dad)
+        self.assertEqual(self.child.father, self.dad)
+        self.assertIn(self.child, self.dad.children)
+    
+    def test_set_father_error(self):
+        self.dad.gender = Gender.FEMALE
+        with self.assertRaises(PersonError) as context:
+            self.child.set_father(self.dad)
+        self.assertIn('is not male', str(context.exception))
+
     def test_add_child(self):
         self.assertNotIn(self.child, self.mom.children)
         self.mom.add_child(self.child)
@@ -84,7 +97,39 @@ class TestPerson(unittest.TestCase):
         self.child.set_father(self.dad)
         self.child.remove_father()
         self.assertNotIn(self.child, self.dad.children)
+
+    def test_remove_mother(self):
+        self.child.set_mother(self.mom)
+        self.child.remove_mother()
+        self.assertNotIn(self.child, self.mother.children)
+
+    def test_remove_father_error(self):
+        pass
+
+    def test_remove_mother_error(self):
+        pass
+
+    def test_get_persons_name(self):
+        pass
+
+    def test_grandparents(self):
+        pass
+
+    def test_all_grandparents(self):
+        pass
+
+    def test_all_ancestors(self):
+        pass
+
+    def test_ancestors(self):
+        pass
+
+    def test_ancestors_error(self):
+        pass
+
     '''
+
+    #TODO: 
 
 if __name__ == '__main__':
     unittest.main()
