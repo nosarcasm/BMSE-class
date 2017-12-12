@@ -106,6 +106,27 @@ class TestPerson(unittest.TestCase):
         self.assertIn('cannot add child', str(context.exception))
         self.assertIn('with unknown gender of child', str(context.exception))
 
+        #adding more tests to cover all possible cases - father set on top of father
+        self.child.gender = Gender.MALE
+        self.dad.add_child(self.child)
+        with self.assertRaises(PersonError) as context:
+            self.dad.add_child(self.child)
+        self.assertIn("already has father", str(context.exception))
+
+        #adding more tests to cover all possible cases - mother set on top of mother
+        self.mom.add_child(self.child)
+        with self.assertRaises(PersonError) as context:
+            self.mom.add_child(self.child)
+        self.assertIn("already has mother", str(context.exception))
+
+        #adding more tests to cover all possible cases - check for loops or impossibilities in graph
+        self.root_child.gender = Gender.MALE
+
+        #adding more tests to cover all possible cases - check for loops or impossibilities in graph
+        with self.assertRaises(PersonError) as context:
+            self.root_child.add_child(self.head_father)
+        self.assertIn("is an ancestor of person", str(context.exception))
+
     def test_remove_father(self):
         self.child.set_father(self.dad)
         self.child.remove_father()
