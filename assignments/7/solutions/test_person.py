@@ -99,6 +99,7 @@ class TestPerson(unittest.TestCase):
         self.assertIn('with unknown gender of parent', str(context.exception))
 
         #adding more tests to cover all possible cases - father set on top of father
+        self.dad.gender = Gender.MALE
         self.dad.add_child(self.child)
         with self.assertRaises(PersonError) as context:
             self.dad.add_child(self.child)
