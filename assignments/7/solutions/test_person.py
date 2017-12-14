@@ -98,16 +98,7 @@ class TestPerson(unittest.TestCase):
         self.assertIn('cannot add child', str(context.exception))
         self.assertIn('with unknown gender of parent', str(context.exception))
 
-        #FIXED BUG from unittests: we need to set the gender of the child too, right? 
-        self.dad.gender = Gender.MALE
-        self.child.gender = Gender.UNKNOWN
-        with self.assertRaises(PersonError) as context:
-            self.dad.add_child(self.child)
-        self.assertIn('cannot add child', str(context.exception))
-        self.assertIn('with unknown gender of child', str(context.exception))
-
         #adding more tests to cover all possible cases - father set on top of father
-        self.child.gender = Gender.MALE
         self.dad.add_child(self.child)
         with self.assertRaises(PersonError) as context:
             self.dad.add_child(self.child)
@@ -171,15 +162,18 @@ class TestPerson(unittest.TestCase):
 
     def test_grandparents(self):
         grandparents_names = set([Person.get_persons_name(i) for i in self.root_child.grandparents()])
-        true_grandparents = set(['root_child_mom_mom', 'root_child_dad_mom', 
-                                'root_child_mom_dad', 'root_child_dad_dad'])
+        true_grandparents = {'root_child_mom_mom', 'root_child_dad_mom', 
+                                'root_child_mom_dad', 'root_child_dad_dad'}
         self.assertEqual(grandparents_names,true_grandparents)
 
     def test_all_grandparents(self):
         all_grandparents_names = set([Person.get_persons_name(i) for i in self.root_child.all_grandparents()])
-        true_all_grandparents = set(['root_child_dad_mom_dad', 'root_child_dad_dad_dad', 'root_child_dad_mom_mom', 
+        #FIXED BUG: all grandparents returns all grandparents + great-grands, etc...
+        true_all_grandparents = {'root_child_dad_mom_dad', 'root_child_dad_dad_dad', 'root_child_dad_mom_mom', 
                             'root_child_mom_dad_dad', 'root_child_mom_dad_mom', 'root_child_mom_mom_dad', 
-                            'root_child_mom_mom_mom', 'root_child_dad_dad_mom'])
+                            'root_child_mom_mom_mom', 'root_child_dad_dad_mom',
+                            'root_child_mom_mom', 'root_child_dad_mom', 
+                            'root_child_mom_dad', 'root_child_dad_dad'}
         self.assertEqual(all_grandparents_names,true_all_grandparents)
 
     def test_all_ancestors(self):

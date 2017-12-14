@@ -345,7 +345,8 @@ class Person(object):
         Returns:
             :obj:`set`: all of this person's known grandparents
         '''
-        return self.ancestors(3, max_depth=float('inf'))
+        #FIXED BUG: intital code had depth 3, should have been depth 2
+        return self.ancestors(2, max_depth=float('inf'))
 
     def all_ancestors(self):
         ''' Provide all of this person's known ancestors
