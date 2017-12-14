@@ -187,10 +187,6 @@ class Person(object):
             :obj:`PersonError`: if `child` is already in person's descendents (including children)
             :obj:`PersonError`: if `child` is in person's ancestors (cycle detection)
         '''
-        if child.gender == Gender.UNKNOWN: #check for null gender
-            #FIXED BUG from unittests: make sure to check against Gender.UNKNOWN, not UNKNOWN
-            #FIXED BUG from unittests: make sure to say "cannot add child" and "with unknown gender"
-            raise PersonError("cannot add child %s with unknown gender of child"%child.name)
         if (child.mother != None)&(self.gender == Gender.FEMALE): #check if we're about to overwrite child's mother
             raise PersonError("child %s already has mother %s set"%(child.name, child.mother.name))
         if (child.father != None)&(self.gender == Gender.MALE): #check if we're about to overwrite child's father
