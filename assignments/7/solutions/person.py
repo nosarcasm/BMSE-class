@@ -206,15 +206,6 @@ class Person(object):
         self.children.add(child)
         return None
 
-    def __str__(self):
-        """ Provide a string representation of this person
-        """
-        return "{}: gender {}; mother {}; father {}".format(
-            self.name,
-            self.gender,
-            Person.get_persons_name(self.mother),
-            Person.get_persons_name(self.father))
-
     def ancestors(self, min_depth, max_depth=None):
         """ Return this person's ancestors within a generational depth range
 

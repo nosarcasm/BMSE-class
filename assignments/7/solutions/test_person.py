@@ -8,6 +8,7 @@
 :License: MIT
 """
 import unittest
+import sys
 
 from person import Person, Gender, PersonError
 
@@ -24,6 +25,12 @@ class TestGender(unittest.TestCase):
             Gender().get_gender('---')
         self.assertIn('Illegal gender', str(context.exception))
 
+    def test_genders_string_mappings(self):
+        output_string = Gender().genders_string_mappings()
+        self.assertIn("Legal genders, which are case insensitive, map to gender constants:",output_string)
+        self.assertIn("-> M", output_string)
+        self.assertIn("-> F", output_string)
+        self.assertIn("-> unknown", output_string)
 
 class TestPerson(unittest.TestCase):
 
@@ -50,6 +57,10 @@ class TestPerson(unittest.TestCase):
                 add_parents(mom, depth+1, max_depth)
         add_parents(self.root_child, 0, self.generations)
         self.head_father = self.root_child.father.father.father
+
+    def test_person_attrs(self):
+        teststr = str(self.dad)
+        self.assertIn("name: dad; gender: M>", teststr)
 
     def test_set_mother(self):
         self.child.set_mother(self.mom)
@@ -202,6 +213,11 @@ class TestPerson(unittest.TestCase):
         self.assertIn('max_depth (1) cannot be less than min_depth (2)', str(context.exception))
 
     def test_descendants(self):
+        children = set([Person.get_persons_name(i) 
+                              for i in self.head_father.descendants()])
+        true_children = {'root_child_dad_dad'}
+        self.assertEqual(children, true_children)
+        
         all_descendants = set([Person.get_persons_name(i) 
                               for i in self.head_father.descendants(min_depth=1,max_depth=float('inf'))])
         true_descendants = {'root_child_dad_dad', 'root_child_dad', 'root_child'}
